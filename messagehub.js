@@ -14,14 +14,12 @@ module.exports = function(RED) {
     var apikey = config.apikey;
     var kafka_rest_url = config.kafkaresturl;
     var services = {
-      "messagehub": [
-        {
-          "credentials": {
-            "api_key": apikey,
-            "kafka_rest_url": kafka_rest_url
-          }
+      "messagehub": [{
+        "credentials": {
+          "api_key": apikey,
+          "kafka_rest_url": kafka_rest_url
         }
-      ]
+      }]
     }
 
     var instance = new MessageHub(services);
@@ -37,16 +35,15 @@ module.exports = function(RED) {
         var list = new MessageHub.MessageList(payloads);
 
         instance.produce(topic, list.messages)
-        .then(function(data) {
-          node.log("Message sent");
-          node.log(data);
-        })
-        .fail(function(error) {
-          node.error(error);
-        });
+          .then(function(data) {
+            node.log("Message sent");
+            node.log(data);
+          })
+          .fail(function(error) {
+            node.error(error);
+          });
       });
-    }
-    catch(e) {
+    } catch (e) {
       node.error(e);
     }
   }
@@ -57,21 +54,19 @@ module.exports = function(RED) {
    * Message Hub Consumer
    */
   function MessageHubConsumer(config) {
-    RED.nodes.createNode(this,config);
+    RED.nodes.createNode(this, config);
 
     var node = this;
     var MessageHub = require('message-hub-rest');
     var apikey = config.apikey;
     var kafka_rest_url = config.kafkaresturl;
     var services = {
-      "messagehub": [
-        {
-          "credentials": {
-            "api_key": apikey,
-            "kafka_rest_url": kafka_rest_url
-          }
+      "messagehub": [{
+        "credentials": {
+          "api_key": apikey,
+          "kafka_rest_url": kafka_rest_url
         }
-      ]
+      }]
     }
 
     var instance = new MessageHub(services);
@@ -83,29 +78,33 @@ module.exports = function(RED) {
     }
 
     node.log(topic);
-    instance.consume('nodered-' + topic + "-" + random(), 'nodered', { 'auto.offset.reset': 'largest' })
-    .then(function(response) {
-      consumerInstance = response[0];
-    })
-    .fail(function(error) {
-      node.error(error);
-    });
+    instance.consume('nodered-' + topic + "-" + random(), 'nodered', {
+        'auto.offset.reset': 'largest'
+      })
+      .then(function(response) {
+        consumerInstance = response[0];
+      })
+      .fail(function(error) {
+        node.error(error);
+      });
 
     try {
       this.log("Consumer created...");
       setInterval(function() {
         consumerInstance.get(topic)
-        .then(function(data) {
-          for(var i=0; i<data.length; i++) {
-            node.send({payload: data[i]});
-          }
-        })
-        .fail(function(err) {
-          node.error(err);
-        });
+          .then(function(data) {
+            for (var i = 0; i < data.length; i++) {
+              node.send({
+                payload: data[i]
+              });
+            }
+          })
+          .fail(function(err) {
+            console.log("->ERROR<-");
+            node.error(err);
+          });
       }, 2000);
-    }
-    catch(e){
+    } catch (e) {
       node.error(e);
       return;
     }
