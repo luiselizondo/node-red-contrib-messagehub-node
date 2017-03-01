@@ -5,6 +5,9 @@ module.exports = function(RED) {
   /*
    *   MessageHub Producer
    */
+
+  console.log('> STARTING');
+
   function MessageHubProducer(config) {
     RED.nodes.createNode(this, config);
 
@@ -77,6 +80,8 @@ module.exports = function(RED) {
       return Math.floor((Math.random() * 100) + 1);
     }
 
+    // TODO get the consumer instance name from host name
+
     node.log(topic);
     instance.consume('nodered-' + topic + "-" + random(), 'nodered', {
         'auto.offset.reset': 'largest'
@@ -87,6 +92,8 @@ module.exports = function(RED) {
       .fail(function(error) {
         node.error(error);
       });
+
+    // TODO if it fails, don't poll
 
     try {
       this.log("Consumer created...");
