@@ -8,16 +8,20 @@ var INSTANCE_RETRY_MS = 3000,
  */
 module.exports = function(RED) {
 
-  var instanceName;
+  var cgGroupName;
+
+  function random() {
+    return "" + Math.floor((Math.random() * 100) + 1) + "-" + Date.now();
+  }
   try {
-    // If we're on Bluemix, use the unique app ID as instance name
+    // If we're on Bluemix, use the unique app ID as the consumer group name
     var vcapApplication = JSON.parse(process.env.VCAP_APPLICATION);
-    instanceName = vcapApplication.application_id + "_" + (vcapApplication.instance_index ? vcapApplication.instance_index : "0");
+    cgGroupName = vcapApplication.application_id;
   } catch (e) {
     // Otherwise use a random string
-    instanceName = "nodered-" + Math.floor((Math.random() * 100) + 1) + "-" + Date.now();
+    cgGroupName = "nodered-" + random();
   }
-  console.log("Using " + instanceName + " as instance name");
+  console.log("Using " + cgGroupName + " as consumer group name");
 
   /*
    *   MessageHub Producer
@@ -67,7 +71,7 @@ module.exports = function(RED) {
       cb(new Error("Message Hub client is null"));
       return;
     }
-    messageHub.consume('nodered-' + instanceName, 'nodered', {
+    messageHub.consume('nodered-' + cgGroupName, random(), {
         'auto.offset.reset': 'largest'
       })
       .then(function(response) {
