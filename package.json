@@ -1,6 +1,6 @@
 {
   "name": "node-red-contrib-messagehub-node",
-  "version": "0.0.10",
+  "version": "0.1.0",
   "description": "Node-RED nodes of HighLevel MessageHub Producer and Consumer",
   "dependencies": {
     "async": "^2.1.5",
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://hub.jazz.net/git/garage/node-red-contrib-messagehub-node"
+    "url": "https://github.com/bluemixgarage/node-red-contrib-messagehub-node"
   },
   "license": "Apache-2.0",
   "keywords": [
