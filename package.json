@@ -1,13 +1,14 @@
 {
   "name": "node-red-contrib-messagehub-node",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Node-RED nodes of HighLevel MessageHub Producer and Consumer",
   "dependencies": {
+    "async": "^2.1.5",
     "message-hub-rest": "^1.1.2"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/luiselizondo/node-red-contrib-messagehub-node.git"
+    "url": "https://github.com/bluemixgarage/node-red-contrib-messagehub-node"
   },
   "license": "Apache-2.0",
   "keywords": [
@@ -32,20 +33,19 @@
     }
   },
   "author": {
-    "name": "IBM",
+    "name": "IBM"
   },
-  "maintainers": [
-    {
-      "name": "luiselizondo",
-      "email": "luis.elizondo@mx1.ibm.com"
-    },
-    {
-      "name": "niall-weedon",
-      "email": "nweedo3@uk.ibm.com"
-    },
-    {
-      "name": "kfarmer3",
-      "email": "kfarme3@uk.ibm.com"
-    }
-  ]
+  "maintainers": [{
+    "name": "luiselizondo",
+    "email": "luis.elizondo@mx1.ibm.com"
+  }, {
+    "name": "niall-weedon",
+    "email": "nweedo3@uk.ibm.com"
+  }, {
+    "name": "kfarmer3",
+    "email": "kfarme3@uk.ibm.com"
+  }, {
+    "name": "BluemixGarage",
+    "email": "garage@fr.ibm.com"
+  }]
 }
