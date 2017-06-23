@@ -1,23 +1,112 @@
-<script type="text/javascript">
-    RED.nodes.registerType('messagehub out',{
-        category: 'function',
-        color: '#FFFFFF',
-        defaults: {
-            apikey:{value:"", required: true},
-            topic: {value:"", required: true},
-            kafkaresturl: {value: "https://kafka-rest-prod01.messagehub.services.us-south.bluemix.net:443", required: true}
-        },
-        inputs:1,
-        outputs:0,
-        icon: "kafka.png",
-        align: "right",
-        label: function() {
-            return this.name||"messagehub out";
-        }
-    });
+<script type="text/x-red" data-template-name="messagehub out">
+    <div class="form-row">
+        <label for="node-input-service"><i class="fa fa-hand-o-right"></i> Bluemix Service</label>
+        <select type="text" id="node-input-service" style="display: inline-block; vertical-align:middle; width: 72%;">
+          <option value="">Select a Message Hub service instance</option>
+        </select>
+    </div>
+    <div class="form-row">
+        <label for="node-input-kafkaresturl"><i class="fa fa-save"></i> Kafka REST URL </label>
+        <input type="text" id="node-input-kafkaresturl" placeholder="Kafka REST URL" style="display: inline-block; vertical-align:middle; width: 72%;"/>
+    </div>
+    <div class="form-row">
+        <label for="node-input-apikey"><i class="fa fa-save"></i> API Key </label>
+        <input type="text" id="node-input-apikey" placeholder="API Key" style="display: inline-block; vertical-align:middle; width: 72%;"/>
+    </div>
+    <div class="form-row">
+        <label for="node-input-topics"><i class="fa fa-hand-o-right"></i> Topics </label>
+        <select type="text" id="node-input-topics" style="display: inline-block; vertical-align:middle; width: 72%;">
+        </select>
+    </div>
+    <div class="form-row">
+        <label for="node-input-topic"><i class="fa fa-save"></i> Current </label>
+        <input type="text" id="node-input-topic" placeholder="Topic" style="display: inline-block; vertical-align:middle; width: 72%;"/>
+    </div>
+    <div class="form-tips" id="node-missing-service-warning" style="display: none"><i class="fa fa-warning"></i><b> Warning:</b> There is no Message Hub service connected
+    </div>
+    <div class="form-tips" id="node-node-info"><i class="fa fa-book"></i><b> Tips:</b> Check out the node info tab for more information
+    </div>
 </script>
 
-<script type="text/x-red" data-template-name="messagehub out">
+<script type="text/javascript">
+    (function() {
+        function updateTopicList(node) {
+            var serviceSelect = $('#node-input-service'),
+                topicsSelect = $('#node-input-topics');
+
+            topicsSelect.empty();
+            $.getJSON('message-hub/service/'+serviceSelect.val()+'/topics', function(topics) {
+                $.each(topics, function(index, topic) {
+                    topicsSelect.append('<option value="' + topic.name + '">' + topic.name + '</option>');
+                });
+
+                topicsSelect.find('option')
+                    .filter(function() { return $(this).val() === node.topics; })
+                    .attr('selected', true);
+
+            });
+        }
+
+        function oneditprepare() {
+            var node = this;
+
+            $.getJSON('message-hub/vcap/', function(services) {
+                var select = $('#node-input-service'),
+                    topicsSelect = $('#node-input-topics');
+
+                if (services.length == 0)
+                    return $("#node-missing-service-warning").show();
+
+                for (var i = 0, service; service = services[i]; i++) {
+                    select.append('<option value="' + service.name + '">' + service.name + '</option>');
+                }
+
+                select.find("option")
+                    .filter(function() { return $(this).val() === node.service; })
+                    .attr('selected', true);
+
+                select.change(function() {
+                    var serviceName = $(this).val(),
+                        service = services.find(function(s) { return s.name === serviceName; });
+                    if (service) {
+                        $("#node-input-kafkaresturl").val(service.credentials.kafka_rest_url);
+                        $("#node-input-apikey").val(service.credentials.api_key);
+                        updateTopicList(node);
+                    }
+                });
+
+                topicsSelect.change(function() {
+                    $('#node-input-topic').val($(this).val());
+                });
+                updateTopicList(node);
+            });
+        }
+
+        RED.nodes.registerType('messagehub out',{
+            category: 'function',
+            color: '#FFFFFF',
+            defaults: {
+                apikey: {value:"", required: true},
+                topic: {value:"", required: true},
+                kafkaresturl: {value: "https://kafka-rest-prod01.messagehub.services.us-south.bluemix.net:443", required: true}
+            },
+            inputs:1,
+            outputs:0,
+            icon: "kafka.png",
+            align: "right",
+            label: function() {
+                return this.name || "messagehub out";
+            },
+            labelStyle: function() {
+                return this.name ? "node_label_italic" : "";
+            },
+            oneditprepare: oneditprepare
+        });
+
+    })();
+</script>
+
+<!--script type="text/x-red" data-template-name="messagehub out">
     <div class="form-row">
         <label for="node-input-apikey"><i class="icon-tag"></i>API Key</label>
         <input type="text" id="node-input-apikey" placeholder="API Key">
@@ -32,7 +121,7 @@
         <label for="node-input-topic"><i class="icon-tag"></i>Topic</label>
         <input type="text" id="node-input-topic" placeholder="Topic">
     </div>
-</script>
+</script-->
 
 <script type="text/x-red" data-help-name="messagehub out">
     <p>A simple Message Hub producer node.</p>

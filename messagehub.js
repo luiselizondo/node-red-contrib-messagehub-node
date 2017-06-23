@@ -2,6 +2,39 @@
  * Created by fwang1 on 3/25/15.
  */
 module.exports = function(RED) {
+    var MessageHub = require('message-hub-rest'),
+        vcap = JSON.parse(process.env.VCAP_SERVICES || "{}"),
+        services = null,
+        servicesList = null;
+    services = vcap["messagehub"] || [];
+
+    // make these names available to the node configuration
+    RED.httpAdmin.get('/message-hub/vcap', function(req, res) {
+        res.json(services);
+    });
+
+    RED.httpAdmin.get('/message-hub/service/:serviceSelectedVal/topics', function(req, res) {
+        var serviceSelectedVal = decodeURIComponent(req.params.serviceSelectedVal),
+            selectedService = services.find(function(service) {
+                return service.name == serviceSelectedVal;
+            });
+
+        if (!selectedService)
+            return res.json([]);
+
+        var instance = new MessageHub({
+            messagehub: [selectedService]
+        });
+
+        instance.topics.get()
+          .then(function(response) {
+              res.json(response);
+          })
+          .fail(function(error) {
+              res.json(error)
+          });
+    });
+
   /*
    *   MessageHub Producer
    */
@@ -9,7 +42,6 @@ module.exports = function(RED) {
     RED.nodes.createNode(this, config);
 
     var node = this;
-    var MessageHub = require('message-hub-rest');
 
     var apikey = config.apikey;
     var kafka_rest_url = config.kafkaresturl;
@@ -60,7 +92,6 @@ module.exports = function(RED) {
     RED.nodes.createNode(this,config);
 
     var node = this;
-    var MessageHub = require('message-hub-rest');
     var apikey = config.apikey;
     var kafka_rest_url = config.kafkaresturl;
     var services = {
