@@ -21,10 +21,7 @@
         <label for="node-input-topic"><i class="fa fa-save"></i> Current </label>
         <input type="text" id="node-input-topic" placeholder="Topic" style="display: inline-block; vertical-align:middle; width: 72%;"/>
     </div>
-    <div class="form-row">
-        <label for="node-input-topic"><i class="fa fa-save"></i> Poll interval </label>
-        <input type="number" id="node-input-interval" placeholder="Interval" style="display: inline-block; vertical-align:middle; width: 72%;"/>
-    </div>
+    {{extraInputs}}
     <div class="form-tips" id="node-missing-service-warning" style="display: none"><i class="fa fa-warning"></i><b> Warning:</b> There is no Message Hub service connected
     </div>
     <div class="form-tips" id="node-node-info"><i class="fa fa-book"></i><b> Tips:</b> Check out the node info tab for more information
@@ -104,16 +101,21 @@ Topic = "topic"
             });
         }
 
-        function registerNode(name, conf) {
+        function registerNode(name, conf, defaults, extraInputs) {
+            var basicDefaults = {
+                apikey: {value:"", required: true},
+                topic: {value:"", required: true},
+                kafkaresturl: {value: "https://kafka-rest-prod01.messagehub.services.us-south.bluemix.net:443", required: true}
+            };
+            for (var key in defaults) {
+                if (!defaults.hasOwnProperty(key))
+                  return;
+                basicDefaults[key] = defaults[key];
+            }
             var basicConf = {
                 category: 'function',
                 color: '#FFFFFF',
-                defaults: {
-                    interval: {value: 2000, required: true},
-                    apikey: {value:"", required: true},
-                    topic: {value:"", required: true},
-                    kafkaresturl: {value: "https://kafka-rest-prod01.messagehub.services.us-south.bluemix.net:443", required: true}
-                },
+                defaults: basicDefaults,
                 inputs: 0,
                 outputs: 0,
                 icon: "kafka.png",
@@ -142,7 +144,10 @@ Topic = "topic"
             $('<script>')
                 .attr('type', 'text/x-red')
                 .attr('data-template-name', name)
-                .text($('script[type="text/x-red"][data-template-name="messagehub"]').text())
+                .text($('script[type="text/x-red"][data-template-name="messagehub"]')
+                    .text()
+                    .replace('{{extraInputs}}', extraInputs || '')
+                )
                 .appendTo('body');
 
 
@@ -154,10 +159,21 @@ Topic = "topic"
             outputs: 0
         });
 
-        registerNode('messagehub in', {
-            inputs: 0,
-            outputs: 1
-        });
+        registerNode('messagehub in',
+            {
+                inputs: 0,
+                outputs: 1
+            },
+            {
+                interval: {value: 2000, required: true},
+            },
+            [
+                '<div class="form-row">',
+                    '<label for="node-input-topic"><i class="fa fa-save"></i> Poll interval </label>',
+                    '<input type="number" id="node-input-interval" placeholder="Interval" style="display: inline-block; vertical-align:middle; width: 72%;"/>',
+                '</div>'
+            ].join("\n")
+        );
 
     })();
 </script>
