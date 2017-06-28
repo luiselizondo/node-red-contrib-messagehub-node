@@ -5,49 +5,94 @@
 var MessageHub = require('message-hub-rest');
 var Q = require('q');
 
-function createServices(config) {
+function buildCredentials(kafkaRestUrl, apiKey) {
   return {
-    "messagehub": [
-      {
-        "credentials": {
-          "api_key":  config.apikey,
-          "kafka_rest_url": config.kafkaresturl
-        }
+    messagehub: [{
+      credentials: {
+        api_key:  apiKey,
+        kafka_rest_url: kafkaRestUrl
       }
-    ]
-  }
+    }]
+  };
 }
 
 module.exports = function(RED) {
-    var vcap = JSON.parse(process.env.VCAP_SERVICES || "{}");
-    var services = vcap["messagehub"] || [];
+  var vcap = JSON.parse(process.env.VCAP_SERVICES || "{}");
+  var services = vcap["messagehub"] || [];
 
-    // make these names available to the node configuration
-    RED.httpAdmin.get('/message-hub/vcap', function(req, res) {
-      res.json(services);
-    });
+  // make these names available to the node configuration
+  RED.httpAdmin.get('/message-hub/vcap', function(req, res) {
+    res.json(services);
+  });
 
-    RED.httpAdmin.get('/message-hub/service/:serviceSelectedVal/topics', function(req, res) {
-      var serviceSelectedVal = decodeURIComponent(req.params.serviceSelectedVal),
-        selectedService = services.find(function(service) {
-            return service.name == serviceSelectedVal;
-        });
+  RED.httpAdmin.get('/message-hub/service/:nodeId/topics', function(req, res) {
+    var nodeId = decodeURIComponent(req.params.nodeId);
+    var service = RED.nodes.getNode(nodeId);
 
-      if (!selectedService)
-        return res.json([]);
+    if (!service)
+      return res.json([]);
 
-      var instance = new MessageHub({
-        messagehub: [selectedService]
+    var instance = new MessageHub(service.getService());
+
+    instance.topics.get()
+      .then(function(response) {
+        res.json(response);
+      })
+      .fail(function(error) {
+        res.json(error)
       });
+  });
 
-      instance.topics.get()
-        .then(function(response) {
-          res.json(response);
-        })
-        .fail(function(error) {
-          res.json(error)
+  RED.httpAdmin.get('/message-hub/service/:kafkaRestUrl/:apiKey/topics', function(req, res) {
+    var kafkaRestUrl = decodeURIComponent(req.params.kafkaRestUrl);
+    var apiKey = decodeURIComponent(req.params.apiKey);
+
+    if (!kafkaRestUrl || !apiKey)
+      return res.json([]);
+
+    var instance = new MessageHub(buildCredentials(kafkaRestUrl, apiKey));
+
+    instance.topics.get()
+      .then(function(response) {
+        res.json(response);
+      })
+      .fail(function(error) {
+        res.json(error)
+      });
+  });
+
+  function MessageHubService(config) {
+    RED.nodes.createNode(this, config);
+
+    this.kafkaRestUrl = config.kafkaRestUrl;
+    this.credentials = this.credentials || {};
+    this.apiKey = this.credentials.apiKey;
+    this.service = this.credentials.service;
+
+    this.getService = (function() {
+      var apiKey = this.apiKey;
+      var kafkaRestUrl = this.kafkaRestUrl;
+      if (this.service) {
+        var serviceName = this.service;
+        var service = services.find(function(s) {
+          return s.name == serviceName;
         });
-    });
+
+        if (service) {
+          apiKey = service.credentials.api_key;
+          kafkaRestUrl = service.credentials.kafka_rest_url;
+        }
+      }
+
+      return buildCredentials(kafkaRestUrl, apiKey);
+    }).bind(this)
+  }
+
+  RED.nodes.registerType('messagehub service', MessageHubService, {
+    credentials: {
+      apiKey: {type: 'text'}
+    }
+  });
 
   /*
    *   MessageHub Producer
@@ -56,13 +101,13 @@ module.exports = function(RED) {
     RED.nodes.createNode(this, config);
 
     var node = this;
-    var services = createServices(config);
+    var service = RED.nodes.getNode(config.service);
 
-    var instance = new MessageHub(services);
+    var instance = new MessageHub(service.getService());
     var topic = config.topic;
 
-    try {
-      this.on("input", function(msg) {
+    this.on("input", function(msg) {
+      try {
         var payloads = [];
 
         node.log(msg.payload);
@@ -71,18 +116,17 @@ module.exports = function(RED) {
         var list = new MessageHub.MessageList(payloads);
 
         instance.produce(topic, list.messages)
-        .then(function(data) {
-          node.debug("Message sent");
-          node.debug(data);
-        })
-        .fail(function(error) {
-          node.error(error);
-        });
-      });
-    }
-    catch(e) {
-      node.error(e);
-    }
+          .then(function(data) {
+            node.debug("Message sent");
+            node.debug(data);
+          })
+          .fail(function(error) {
+            node.error(error);
+          });
+      } catch(e) {
+        node.error(e);
+      }
+    });
   }
 
   RED.nodes.registerType("messagehub out", MessageHubProducer);
@@ -94,10 +138,11 @@ module.exports = function(RED) {
     RED.nodes.createNode(this,config);
 
     var node = this;
+    node.loop = true;
     var interval = parseInt(config.interval) || 2000;
-    var services = createServices(config);
+    var service = RED.nodes.getNode(config.service);
 
-    var instance = new MessageHub(services);
+    var instance = new MessageHub(service.getService());
     var topic = config.topic;
 
     function random() {
@@ -106,6 +151,9 @@ module.exports = function(RED) {
 
     function getTopicAndSend(consumerInstance) {
       var lastCheck = Date.now();
+      if (!node.loop)
+        return;
+
       return consumerInstance
         .get(topic)
         .then(function(data) {
@@ -119,6 +167,7 @@ module.exports = function(RED) {
         .then(function() {
           var deferred = Q.defer();
           var waitMsec = interval - (Date.now() - lastCheck);
+
           setTimeout(function() {
             deferred.resolve(getTopicAndSend(consumerInstance));
           }, waitMsec > 0 ? waitMsec : 0)
@@ -140,6 +189,10 @@ module.exports = function(RED) {
       .fail(function(error) {
         node.error(error);
       });
+
+    this.on('close', function() {
+      node.loop = false;
+    });
   }
 
   RED.nodes.registerType("messagehub in", MessageHubConsumer);
