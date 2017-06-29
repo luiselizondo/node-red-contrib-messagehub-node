@@ -110,7 +110,6 @@ module.exports = function(RED) {
       try {
         var payloads = [];
 
-        node.log(msg.payload);
         payloads.push(msg.payload);
 
         var list = new MessageHub.MessageList(payloads);
