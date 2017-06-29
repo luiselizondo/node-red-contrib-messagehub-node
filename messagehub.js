@@ -116,10 +116,6 @@ module.exports = function(RED) {
         var list = new MessageHub.MessageList(payloads);
 
         instance.produce(topic, list.messages)
-          .then(function(data) {
-            node.debug("Message sent");
-            node.debug(data);
-          })
           .fail(function(error) {
             node.error(error);
           });
