@@ -4,6 +4,7 @@
 
 var MessageHub = require('message-hub-rest');
 var Q = require('q');
+var cfEnv = require('cfenv');
 
 function buildCredentials(kafkaRestUrl, apiKey) {
   return {
@@ -17,8 +18,13 @@ function buildCredentials(kafkaRestUrl, apiKey) {
 }
 
 module.exports = function(RED) {
-  var vcap = JSON.parse(process.env.VCAP_SERVICES || "{}");
-  var services = vcap["messagehub"] || [];
+  var appEnv = cfEnv.getAppEnv();
+  var services = [];
+
+  Object.keys(appEnv.services).forEach(function(key) {
+    if (key.match(/^(messagehub)/i))
+      services.push.apply(services, appEnv.services[i]);
+  });
 
   // make these names available to the node configuration
   RED.httpAdmin.get('/message-hub/vcap', function(req, res) {
@@ -115,11 +121,17 @@ module.exports = function(RED) {
         var list = new MessageHub.MessageList(payloads);
 
         instance.produce(topic, list.messages)
+          .then(function(response) {
+            msg.payload = response;
+            node.send(msg);
+          })
           .fail(function(error) {
-            node.error(error);
+            msg.error = error;
+            node.error("Error sending messages", msg);
           });
       } catch(e) {
-        node.error(e);
+        msg.error = e;
+        node.error("Error sending messages", msg);
       }
     });
   }
@@ -157,7 +169,7 @@ module.exports = function(RED) {
           }
         })
         .fail(function(err) {
-          node.error(err);
+          node.error("Error getting topic: '"+topic+"' has failed", {error: err});
         })
         .then(function() {
           var deferred = Q.defer();
@@ -182,7 +194,7 @@ module.exports = function(RED) {
         return getTopicAndSend(consumerInstance)
       })
       .fail(function(error) {
-        node.error(error);
+        node.error('Error creating cosumer', {error: error});
       });
 
     this.on('close', function() {
