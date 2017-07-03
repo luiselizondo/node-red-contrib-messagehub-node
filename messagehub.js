@@ -18,12 +18,12 @@ function buildCredentials(kafkaRestUrl, apiKey) {
 }
 
 module.exports = function(RED) {
-  var appEnv = cfEnv.getAppEnv();
+  var appEnv = cfEnv.getAppEnv() || {services: {}};
   var services = [];
 
   Object.keys(appEnv.services).forEach(function(key) {
     if (key.match(/^(messagehub)/i))
-      services.push.apply(services, appEnv.services[i]);
+      services.push.apply(services, appEnv.services[key]);
   });
 
   // make these names available to the node configuration
@@ -71,9 +71,9 @@ module.exports = function(RED) {
     RED.nodes.createNode(this, config);
 
     this.kafkaRestUrl = config.kafkaRestUrl;
+    this.service = config.service;
     this.credentials = this.credentials || {};
     this.apiKey = this.credentials.apiKey;
-    this.service = this.credentials.service;
 
     this.getService = (function() {
       var apiKey = this.apiKey;
@@ -127,7 +127,7 @@ module.exports = function(RED) {
           })
           .fail(function(error) {
             msg.error = error;
-            node.error("Error sending messages", msg);
+            node.error("Failed sending messages", msg);
           });
       } catch(e) {
         msg.error = e;
@@ -184,18 +184,24 @@ module.exports = function(RED) {
 
     node.log('Creating consumer for topic: \'' + topic + '\'');
 
-    instance
-      .consume('nodered-' + topic + "-" + random(), 'nodered', { 'auto.offset.reset': 'largest' })
-      .then(function(response) {
-        return response[0];
-      })
-      .then(function(consumerInstance) {
-        node.log("Consumer created...");
-        return getTopicAndSend(consumerInstance)
-      })
-      .fail(function(error) {
-        node.error('Error creating cosumer', {error: error});
-      });
+    try {
+      instance
+        .consume('nodered-' + topic + "-" + random(), 'nodered', { 'auto.offset.reset': 'largest' })
+        .then(function(response) {
+          return response[0];
+        })
+        .then(function(consumerInstance) {
+          node.log("Consumer created...");
+          return getTopicAndSend(consumerInstance)
+        })
+        .fail(function(error) {
+          node.error('Error creating cosumer', {error: error});
+        });
+      this.status({fill:"green", shape:"ring", text:"Connected"});
+    } catch(e) {
+      node.error(e);
+      this.status({fill:"red", shape:"ring", text:"Error while consuming"});
+    }
 
     this.on('close', function() {
       node.loop = false;
