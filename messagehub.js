@@ -192,12 +192,13 @@ module.exports = function(RED) {
         })
         .then(function(consumerInstance) {
           node.log("Consumer created...");
+          this.status({fill:"green", shape:"ring", text:"Connected"});
           return getTopicAndSend(consumerInstance)
         })
         .fail(function(error) {
-          node.error('Error creating cosumer', {error: error});
+          node.status({fill:"red", shape:"ring", text: error.message});
+          node.error('Error creating consumer', {error: error});
         });
-      this.status({fill:"green", shape:"ring", text:"Connected"});
     } catch(e) {
       node.error(e);
       this.status({fill:"red", shape:"ring", text:"Error while consuming"});
