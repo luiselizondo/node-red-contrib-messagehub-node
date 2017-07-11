@@ -192,7 +192,7 @@ module.exports = function(RED) {
         })
         .then(function(consumerInstance) {
           node.log("Consumer created...");
-          this.status({fill:"green", shape:"ring", text:"Connected"});
+          node.status({fill:"green", shape:"ring", text:"Connected"});
           return getTopicAndSend(consumerInstance)
         })
         .fail(function(error) {
@@ -201,7 +201,7 @@ module.exports = function(RED) {
         });
     } catch(e) {
       node.error(e);
-      this.status({fill:"red", shape:"ring", text:"Error while consuming"});
+      node.status({fill:"red", shape:"ring", text:"Error while consuming"});
     }
 
     this.on('close', function() {
