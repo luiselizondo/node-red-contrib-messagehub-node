@@ -3,7 +3,9 @@
   "version": "0.0.2",
   "description": "Node-RED nodes of HighLevel MessageHub Producer and Consumer",
   "dependencies": {
-    "message-hub-rest": "1.x"
+    "cfenv": "^1.0.4",
+    "message-hub-rest": "^1.1.2",
+    "q": "^1.4.1"
   },
   "repository": {
     "type": "git",
